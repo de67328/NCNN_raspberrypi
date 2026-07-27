@@ -10,19 +10,20 @@ namespace cfg {
 constexpr const char* PARAM_PATH = "model/best.param";
 constexpr const char* BIN_PATH   = "model/best.bin";
 constexpr int   INPUT_SIZE       = 320;      // 模型输入尺寸
-constexpr int   NUM_THREADS      = 2;        // ncnn 推理线程数
+constexpr int   NUM_THREADS      = 3;        // ncnn 推理线程数 (Pi4B:4核,留1核)
 
 // 检测
 constexpr float CONF_THRESHOLD  = 0.25f;
 constexpr float NMS_THRESHOLD   = 0.45f;
 
 // 摄像头
-constexpr int   CAM_WIDTH       = 640;
-constexpr int   CAM_HEIGHT      = 480;
+constexpr int   CAM_WIDTH       = 1296;
+constexpr int   CAM_HEIGHT      = 972;
 constexpr int   CAM_FPS         = 30;
 
 // 显示
 constexpr const char* WIN_NAME  = "Steel Ball Detection";
+constexpr float DISPLAY_SCALE   = 0.55f;    // 显示缩放比例 (0~1)
 constexpr int   WAITKEY_MS      = 10;       // imshow 后等待时间
 
 }  // namespace cfg

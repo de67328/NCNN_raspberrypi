@@ -11,10 +11,16 @@
 #include "visual.h"
 
 #include <chrono>
+#include <csignal>
 #include <exception>
 #include <iostream>
 
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+
+// SIGINT 标志 — Ctrl+C 优雅退出
+static std::sig_atomic_t gExitFlag = 0;
+static void onSignal(int) { gExitFlag = 1; }
 
 // ═══════════════════════════════════════════════════════════════
 int main()
@@ -34,6 +40,10 @@ int main()
         if (!cam.open()) return 1;
 
         cv::namedWindow(cfg::WIN_NAME, cv::WINDOW_AUTOSIZE);
+
+        // 注册信号处理
+        std::signal(SIGINT, onSignal);
+        std::signal(SIGTERM, onSignal);
 
         cv::Mat frame;
         int frameCnt  = 0;
@@ -75,10 +85,21 @@ int main()
             drawHud(frame, true, dispFps, detectMs);
 
             // ── 5. 显示 ──
-            cv::imshow(cfg::WIN_NAME, frame);
+            if (cfg::DISPLAY_SCALE > 0.f && cfg::DISPLAY_SCALE < 1.f) {
+                cv::Mat display;
+                cv::resize(frame, display, cv::Size(), cfg::DISPLAY_SCALE, cfg::DISPLAY_SCALE);
+                cv::imshow(cfg::WIN_NAME, display);
+            } else {
+                cv::imshow(cfg::WIN_NAME, frame);
+            }
 
+            // 多重退出: q/ESC 按键 / Ctrl+C / 窗口关闭
             int key = cv::waitKey(cfg::WAITKEY_MS) & 0xFF;
-            if (key == 'q' || key == 27)
+            int key2 = cv::pollKey();  // 补充抓取 (OpenCV≥4.5)
+            if (key2 >= 0) key = key2;
+
+            bool windowClosed = (cv::getWindowProperty(cfg::WIN_NAME, cv::WND_PROP_VISIBLE) < 1.0);
+            if (gExitFlag || key == 'q' || key == 27 || windowClosed)
                 break;
         }
 
