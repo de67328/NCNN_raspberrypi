@@ -1,0 +1,7 @@
+build/
+runs/
+*_ncnn_model/
+*.onnx
+*.pt
+__pycache__/
+.mplconfig/

@@ -1,0 +1,7 @@
+# 将 path 改成自己的数据集绝对路径。
+path: /path/to/steel_ball_dataset
+train: images/train
+val: images/val
+
+names:
+  0: ball

@@ -7,15 +7,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # ── OpenCV ──
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs highgui)
 
-# ── NCNN ──
-set(NCNN_DIR "/usr/local" CACHE PATH "ncnn install prefix")
-find_library(NCNN_LIB ncnn PATHS ${NCNN_DIR}/lib ${NCNN_DIR}/lib64 REQUIRED)
+# ── NCNN：优先使用 make install 生成的 CMake 包 ──
+find_package(ncnn CONFIG QUIET)
+if(ncnn_FOUND)
+    set(NCNN_TARGET ncnn)
+else()
+    set(NCNN_DIR "/usr/local" CACHE PATH "ncnn install prefix")
+    find_library(NCNN_LIB ncnn PATHS ${NCNN_DIR}/lib ${NCNN_DIR}/lib64 REQUIRED)
+    set(NCNN_TARGET ${NCNN_LIB})
+endif()
 
 # ── OpenMP ──
 find_package(OpenMP REQUIRED)
+find_package(Threads REQUIRED)
 
 message(STATUS "OpenCV: ${OpenCV_VERSION}")
-message(STATUS "NCNN:   ${NCNN_LIB}")
+message(STATUS "NCNN:   ${NCNN_TARGET}")
 
 # ── Target ──
 add_executable(ball_detect
@@ -27,15 +34,38 @@ add_executable(ball_detect
 
 target_include_directories(ball_detect PRIVATE
     ${OpenCV_INCLUDE_DIRS}
-    ${NCNN_DIR}/include
     .
 )
 
+if(NOT ncnn_FOUND)
+    target_include_directories(ball_detect PRIVATE ${NCNN_DIR}/include)
+endif()
+
 target_link_libraries(ball_detect
     ${OpenCV_LIBS}
-    ${NCNN_LIB}
+    ${NCNN_TARGET}
     OpenMP::OpenMP_CXX
+    Threads::Threads
 )
 
-# ── 拷贝模型 ──
-file(COPY ${CMAKE_SOURCE_DIR}/../model DESTINATION ${CMAKE_BINARY_DIR})
+# ── 每次构建都校验并同步最新模型 ──
+set(MODEL_PARAM "${CMAKE_SOURCE_DIR}/model/best.param")
+set(MODEL_BIN "${CMAKE_SOURCE_DIR}/model/best.bin")
+if(NOT EXISTS "${MODEL_PARAM}" OR NOT EXISTS "${MODEL_BIN}")
+    message(FATAL_ERROR
+        "NCNN model not found. Run scripts/export_ncnn.py before building.")
+endif()
+
+add_custom_target(copy_model ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CMAKE_CURRENT_BINARY_DIR}/model"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MODEL_PARAM}"
+            "${CMAKE_CURRENT_BINARY_DIR}/model/best.param"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MODEL_BIN}"
+            "${CMAKE_CURRENT_BINARY_DIR}/model/best.bin"
+    COMMENT "Synchronizing NCNN model"
+    VERBATIM
+)
+add_dependencies(ball_detect copy_model)

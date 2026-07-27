@@ -30,11 +30,15 @@ public:
     int   inputSize     = 320;
 
 private:
-    ncnn::Mat preprocess(const cv::Mat& bgr, int& origH, int& origW);
+    ncnn::Mat preprocess(const cv::Mat& bgr, float& scale,
+                         int& padLeft, int& padTop);
     std::vector<Detection> postprocess(const ncnn::Mat& output,
-                                       int origH, int origW);
+                                       int origH, int origW,
+                                       float scale, int padLeft, int padTop);
     static std::vector<int> nms(const std::vector<Detection>& dets,
                                 float iouThresh);
 
     ncnn::Net net_;
+    std::string inputBlobName_;
+    std::string outputBlobName_;
 };

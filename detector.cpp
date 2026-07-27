@@ -2,9 +2,11 @@
 #include "config.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <iostream>
+#include <stdexcept>
+
+#include <ncnn/mat.h>
 
 // ═══════════════════════════════════════════════════════════════
 Detector::Detector(const std::string& paramPath, const std::string& binPath)
@@ -16,19 +18,43 @@ Detector::Detector(const std::string& paramPath, const std::string& binPath)
     if (net_.load_model(binPath.c_str()) != 0)
         throw std::runtime_error("load_model: " + binPath);
 
+    const auto inputNames = net_.input_names();
+    const auto outputNames = net_.output_names();
+    if (inputNames.empty() || outputNames.empty())
+        throw std::runtime_error("NCNN model has no input or output blob");
+
+    inputBlobName_ = inputNames.front();
+    outputBlobName_ = outputNames.front();
+
     std::cout << "[Detector] loaded (" << cfg::NUM_THREADS << " threads)"
+              << ", input=" << inputBlobName_
+              << ", output=" << outputBlobName_
               << std::endl;
 }
 
 // ═══════════════════════════════════════════════════════════════
-ncnn::Mat Detector::preprocess(const cv::Mat& bgr, int& origH, int& origW)
+ncnn::Mat Detector::preprocess(const cv::Mat& bgr, float& scale,
+                               int& padLeft, int& padTop)
 {
-    origH = bgr.rows;
-    origW = bgr.cols;
+    scale = std::min(static_cast<float>(inputSize) / bgr.cols,
+                     static_cast<float>(inputSize) / bgr.rows);
+    const int resizedW = std::max(1, static_cast<int>(std::round(bgr.cols * scale)));
+    const int resizedH = std::max(1, static_cast<int>(std::round(bgr.rows * scale)));
 
-    ncnn::Mat in = ncnn::Mat::from_pixels_resize(
+    ncnn::Mat resized = ncnn::Mat::from_pixels_resize(
         bgr.data, ncnn::Mat::PIXEL_BGR2RGB,
-        bgr.cols, bgr.rows, inputSize, inputSize);
+        bgr.cols, bgr.rows, resizedW, resizedH);
+
+    const int padW = inputSize - resizedW;
+    const int padH = inputSize - resizedH;
+    padLeft = padW / 2;
+    padTop = padH / 2;
+
+    ncnn::Mat in;
+    ncnn::copy_make_border(resized, in,
+                           padTop, padH - padTop,
+                           padLeft, padW - padLeft,
+                           ncnn::BORDER_CONSTANT, 114.f);
 
     const float norm[3] = { 1.f / 255.f, 1.f / 255.f, 1.f / 255.f };
     in.substract_mean_normalize(nullptr, norm);
@@ -38,23 +64,30 @@ ncnn::Mat Detector::preprocess(const cv::Mat& bgr, int& origH, int& origW)
 // ═══════════════════════════════════════════════════════════════
 std::vector<Detection> Detector::detect(const cv::Mat& bgr)
 {
-    int origH = 0, origW = 0;
-    ncnn::Mat in = preprocess(bgr, origH, origW);
+    if (bgr.empty())
+        return {};
+
+    float scale = 1.f;
+    int padLeft = 0, padTop = 0;
+    ncnn::Mat in = preprocess(bgr, scale, padLeft, padTop);
 
     ncnn::Extractor ex = net_.create_extractor();
-    ex.input("images", in);
+    if (ex.input(inputBlobName_.c_str(), in) != 0)
+        throw std::runtime_error("NCNN failed to set input blob: " + inputBlobName_);
 
     ncnn::Mat out;
-    ex.extract("output0", out);
+    if (ex.extract(outputBlobName_.c_str(), out) != 0)
+        throw std::runtime_error("NCNN failed to extract output blob: " + outputBlobName_);
 
-    return postprocess(out, origH, origW);
+    return postprocess(out, bgr.rows, bgr.cols, scale, padLeft, padTop);
 }
 
 // ═══════════════════════════════════════════════════════════════
 // 三种 ncnn 输出格式自动适配: 通道分离 / 行分离 / 打包
 // ═══════════════════════════════════════════════════════════════
 std::vector<Detection> Detector::postprocess(
-    const ncnn::Mat& output, int origH, int origW)
+    const ncnn::Mat& output, int origH, int origW,
+    float scale, int padLeft, int padTop)
 {
     int nc = output.c, nh = output.h, nw = output.w;
 
@@ -106,17 +139,24 @@ std::vector<Detection> Detector::postprocess(
 
         if (bestScore < confThreshold) continue;
 
-        float x1 = cx - bw * 0.5f, y1 = cy - bh * 0.5f;
-        float x2 = cx + bw * 0.5f, y2 = cy + bh * 0.5f;
-        x1 = std::max(0.f, std::min(x1, 1.f));
-        y1 = std::max(0.f, std::min(y1, 1.f));
-        x2 = std::max(0.f, std::min(x2, 1.f));
-        y2 = std::max(0.f, std::min(y2, 1.f));
+        // YOLOv8 Detect 输出为 letterbox 输入图上的像素坐标，不是 0~1。
+        float x1 = (cx - bw * 0.5f - padLeft) / scale;
+        float y1 = (cy - bh * 0.5f - padTop) / scale;
+        float x2 = (cx + bw * 0.5f - padLeft) / scale;
+        float y2 = (cy + bh * 0.5f - padTop) / scale;
+        x1 = std::clamp(x1, 0.f, static_cast<float>(origW));
+        y1 = std::clamp(y1, 0.f, static_cast<float>(origH));
+        x2 = std::clamp(x2, 0.f, static_cast<float>(origW));
+        y2 = std::clamp(y2, 0.f, static_cast<float>(origH));
+
+        const int boxW = std::max(0, static_cast<int>(std::round(x2 - x1)));
+        const int boxH = std::max(0, static_cast<int>(std::round(y2 - y1)));
+        if (boxW == 0 || boxH == 0) continue;
 
         cand.push_back({bestCls, bestScore,
-                        cv::Rect((int)(x1 * origW), (int)(y1 * origH),
-                                 (int)((x2 - x1) * origW),
-                                 (int)((y2 - y1) * origH))});
+                        cv::Rect(static_cast<int>(std::round(x1)),
+                                 static_cast<int>(std::round(y1)),
+                                 boxW, boxH)});
     }
 
     std::vector<int> keep = nms(cand, nmsThreshold);
@@ -142,6 +182,10 @@ std::vector<int> Detector::nms(const std::vector<Detection>& dets,
         std::vector<int> rem;
         for (size_t i = 1; i < idx.size(); ++i) {
             const cv::Rect& B = dets[idx[i]].box;
+            if (dets[cur].cls_id != dets[idx[i]].cls_id) {
+                rem.push_back(idx[i]);
+                continue;
+            }
             int ix1 = std::max(A.x, B.x), iy1 = std::max(A.y, B.y);
             int ix2 = std::min(A.x + A.width,  B.x + B.width);
             int iy2 = std::min(A.y + A.height, B.y + B.height);

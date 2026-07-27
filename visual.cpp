@@ -1,7 +1,9 @@
 #include "visual.h"
 
-#include <opencv2/imgproc.hpp>
+#include <algorithm>
 #include <cstdio>
+
+#include <opencv2/imgproc.hpp>
 
 static const cv::Scalar BALL_COLOR(0, 255, 0);    // 绿色 (BGR)
 static const cv::Scalar CENTER_COLOR(0, 0, 255);  // 红色
