@@ -34,7 +34,8 @@ int main()
         Detector detector(cfg::PARAM_PATH, cfg::BIN_PATH);
         detector.confThreshold = cfg::CONF_THRESHOLD;
         detector.nmsThreshold  = cfg::NMS_THRESHOLD;
-        detector.inputSize     = cfg::INPUT_SIZE;
+        detector.inputWidth    = cfg::INPUT_WIDTH;
+        detector.inputHeight   = cfg::INPUT_HEIGHT;
 
         Camera cam(cfg::CAM_WIDTH, cfg::CAM_HEIGHT, cfg::CAM_FPS);
         if (!cam.open()) return 1;

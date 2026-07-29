@@ -33,28 +33,20 @@ Detector::Detector(const std::string& paramPath, const std::string& binPath)
 }
 
 // ═══════════════════════════════════════════════════════════════
-ncnn::Mat Detector::preprocess(const cv::Mat& bgr, float& scale,
-                               int& padLeft, int& padTop)
+ncnn::Mat Detector::preprocess(const cv::Mat& bgr,
+                               float& scaleX, float& scaleY)
 {
-    scale = std::min(static_cast<float>(inputSize) / bgr.cols,
-                     static_cast<float>(inputSize) / bgr.rows);
-    const int resizedW = std::max(1, static_cast<int>(std::round(bgr.cols * scale)));
-    const int resizedH = std::max(1, static_cast<int>(std::round(bgr.rows * scale)));
+    if (inputWidth <= 0 || inputHeight <= 0)
+        throw std::runtime_error("invalid model input size");
 
-    ncnn::Mat resized = ncnn::Mat::from_pixels_resize(
+    // 与 320x96 训练数据保持一致：直接非等比缩放，不做 letterbox，
+    // 因此横纵方向必须分别记录缩放比例。
+    scaleX = static_cast<float>(inputWidth) / bgr.cols;
+    scaleY = static_cast<float>(inputHeight) / bgr.rows;
+
+    ncnn::Mat in = ncnn::Mat::from_pixels_resize(
         bgr.data, ncnn::Mat::PIXEL_BGR2RGB,
-        bgr.cols, bgr.rows, resizedW, resizedH);
-
-    const int padW = inputSize - resizedW;
-    const int padH = inputSize - resizedH;
-    padLeft = padW / 2;
-    padTop = padH / 2;
-
-    ncnn::Mat in;
-    ncnn::copy_make_border(resized, in,
-                           padTop, padH - padTop,
-                           padLeft, padW - padLeft,
-                           ncnn::BORDER_CONSTANT, 114.f);
+        bgr.cols, bgr.rows, inputWidth, inputHeight);
 
     const float norm[3] = { 1.f / 255.f, 1.f / 255.f, 1.f / 255.f };
     in.substract_mean_normalize(nullptr, norm);
@@ -67,9 +59,8 @@ std::vector<Detection> Detector::detect(const cv::Mat& bgr)
     if (bgr.empty())
         return {};
 
-    float scale = 1.f;
-    int padLeft = 0, padTop = 0;
-    ncnn::Mat in = preprocess(bgr, scale, padLeft, padTop);
+    float scaleX = 1.f, scaleY = 1.f;
+    ncnn::Mat in = preprocess(bgr, scaleX, scaleY);
 
     ncnn::Extractor ex = net_.create_extractor();
     if (ex.input(inputBlobName_.c_str(), in) != 0)
@@ -79,7 +70,7 @@ std::vector<Detection> Detector::detect(const cv::Mat& bgr)
     if (ex.extract(outputBlobName_.c_str(), out) != 0)
         throw std::runtime_error("NCNN failed to extract output blob: " + outputBlobName_);
 
-    return postprocess(out, bgr.rows, bgr.cols, scale, padLeft, padTop);
+    return postprocess(out, bgr.rows, bgr.cols, scaleX, scaleY);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -87,7 +78,7 @@ std::vector<Detection> Detector::detect(const cv::Mat& bgr)
 // ═══════════════════════════════════════════════════════════════
 std::vector<Detection> Detector::postprocess(
     const ncnn::Mat& output, int origH, int origW,
-    float scale, int padLeft, int padTop)
+    float scaleX, float scaleY)
 {
     int nc = output.c, nh = output.h, nw = output.w;
 
@@ -139,11 +130,12 @@ std::vector<Detection> Detector::postprocess(
 
         if (bestScore < confThreshold) continue;
 
-        // YOLOv8 Detect 输出为 letterbox 输入图上的像素坐标，不是 0~1。
-        float x1 = (cx - bw * 0.5f - padLeft) / scale;
-        float y1 = (cy - bh * 0.5f - padTop) / scale;
-        float x2 = (cx + bw * 0.5f - padLeft) / scale;
-        float y2 = (cy + bh * 0.5f - padTop) / scale;
+        // YOLOv8 输出是 320x96 拉伸图上的像素坐标。横纵方向
+        // 使用各自的比例还原到原始摄像头画面。
+        float x1 = (cx - bw * 0.5f) / scaleX;
+        float y1 = (cy - bh * 0.5f) / scaleY;
+        float x2 = (cx + bw * 0.5f) / scaleX;
+        float y2 = (cy + bh * 0.5f) / scaleY;
         x1 = std::clamp(x1, 0.f, static_cast<float>(origW));
         y1 = std::clamp(y1, 0.f, static_cast<float>(origH));
         x2 = std::clamp(x2, 0.f, static_cast<float>(origW));

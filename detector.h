@@ -27,14 +27,15 @@ public:
     // 参数
     float confThreshold = 0.25f;
     float nmsThreshold  = 0.45f;
-    int   inputSize     = 320;
+    int   inputWidth    = 320;
+    int   inputHeight   = 96;
 
 private:
-    ncnn::Mat preprocess(const cv::Mat& bgr, float& scale,
-                         int& padLeft, int& padTop);
+    ncnn::Mat preprocess(const cv::Mat& bgr,
+                         float& scaleX, float& scaleY);
     std::vector<Detection> postprocess(const ncnn::Mat& output,
                                        int origH, int origW,
-                                       float scale, int padLeft, int padTop);
+                                       float scaleX, float scaleY);
     static std::vector<int> nms(const std::vector<Detection>& dets,
                                 float iouThresh);
 

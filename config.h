@@ -7,9 +7,12 @@
 namespace cfg {
 
 // 模型
-constexpr const char* PARAM_PATH = "model/best.param";
-constexpr const char* BIN_PATH   = "model/best.bin";
-constexpr int   INPUT_SIZE       = 320;      // 模型输入尺寸
+constexpr const char* PARAM_PATH =
+    "model/steel_ball_yolov8n_320x96_b1_fp32_best.param";
+constexpr const char* BIN_PATH =
+    "model/steel_ball_yolov8n_320x96_b1_fp32_best.bin";
+constexpr int   INPUT_WIDTH      = 320;
+constexpr int   INPUT_HEIGHT     = 96;
 constexpr int   NUM_THREADS      = 3;        // ncnn 推理线程数 (Pi4B:4核,留1核)
 
 // 检测

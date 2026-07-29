@@ -49,8 +49,9 @@ target_link_libraries(ball_detect
 )
 
 # ── 每次构建都校验并同步最新模型 ──
-set(MODEL_PARAM "${CMAKE_SOURCE_DIR}/model/best.param")
-set(MODEL_BIN "${CMAKE_SOURCE_DIR}/model/best.bin")
+set(MODEL_BASENAME "steel_ball_yolov8n_320x96_b1_fp32_best")
+set(MODEL_PARAM "${CMAKE_SOURCE_DIR}/model/${MODEL_BASENAME}.param")
+set(MODEL_BIN "${CMAKE_SOURCE_DIR}/model/${MODEL_BASENAME}.bin")
 if(NOT EXISTS "${MODEL_PARAM}" OR NOT EXISTS "${MODEL_BIN}")
     message(FATAL_ERROR
         "NCNN model not found. Run scripts/export_ncnn.py before building.")
@@ -61,10 +62,10 @@ add_custom_target(copy_model ALL
             "${CMAKE_CURRENT_BINARY_DIR}/model"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${MODEL_PARAM}"
-            "${CMAKE_CURRENT_BINARY_DIR}/model/best.param"
+            "${CMAKE_CURRENT_BINARY_DIR}/model/${MODEL_BASENAME}.param"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${MODEL_BIN}"
-            "${CMAKE_CURRENT_BINARY_DIR}/model/best.bin"
+            "${CMAKE_CURRENT_BINARY_DIR}/model/${MODEL_BASENAME}.bin"
     COMMENT "Synchronizing NCNN model"
     VERBATIM
 )

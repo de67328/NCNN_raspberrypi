@@ -51,7 +51,7 @@ void drawHud(cv::Mat& image, bool detecting, float fps, int detectMs)
 
     if (detecting) {
         // 右上角: 模型输入尺寸提示
-        cv::putText(image, "YOLOv8n 320x320",
+        cv::putText(image, "YOLOv8n 320x96 stretch",
                     cv::Point(image.cols - 200, 30),
                     cv::FONT_HERSHEY_SIMPLEX, 0.5,
                     cv::Scalar(180, 180, 180), 1, cv::LINE_AA);

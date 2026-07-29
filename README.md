@@ -6,8 +6,9 @@
 2. 把 `best.pt` 直接导出为 NCNN 的 `.param + .bin`；
 3. 在 64 位 Raspberry Pi OS 上用 C++、NCNN、OpenCV 和 CSI 摄像头实时推理。
 
-当前已有模型 `yolov8n_320_best.pt` 的规格为：输入 `1×3×320×320`，输出
-`1×5×2100`，类别为 `{0: ball}`，模型本身不包含 NMS。
+当前模型 `steel_ball_yolov8n_320x96_b1_fp32_best` 的规格为：输入
+`1×3×96×320`（高×宽），输出 `1×5×630`，类别为 `{0: ball}`，
+FP32、batch 1，模型本身不包含 NMS。
 
 ## 1. 数据集
 
@@ -65,16 +66,17 @@ runs/train/steel_ball/weights/best.pt
 
 ```bash
 python scripts/export_ncnn.py \
-  --weights yolov8n_320_best.pt \
-  --imgsz 320
+  --weights steel_ball_yolov8n_320x96_b1_fp32_best.pt \
+  --imgsz 96 320 \
+  --name steel_ball_yolov8n_320x96_b1_fp32_best
 ```
 
 Ultralytics 会调用 PNNX，并把最终文件整理到：
 
 ```text
-model/best.param
-model/best.bin
-model/metadata.yaml
+model/steel_ball_yolov8n_320x96_b1_fp32_best.param
+model/steel_ball_yolov8n_320x96_b1_fp32_best.bin
+model/steel_ball_yolov8n_320x96_b1_fp32_best.metadata.yaml
 ```
 
 第一次导出若提示缺少 `ncnn` 或 `pnnx`，按提示安装后重新运行：
@@ -133,7 +135,8 @@ rpicam-hello -t 3000
 
 ## 5. 复制、编译、运行
 
-把整个工程（尤其是 `model/best.param` 和 `model/best.bin`）复制到树莓派：
+把整个工程（尤其是 `model/steel_ball_yolov8n_320x96_b1_fp32_best.param`
+和对应 `.bin`）复制到树莓派：
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -143,16 +146,16 @@ cd build
 ```
 
 程序从 `build/model/` 加载模型，按 `q` 或 `Esc` 退出。每次构建都会用
-`model/best.param` 和 `model/best.bin` 同步 `build/model/`，避免误用旧权重；
-缺少模型时 CMake 会直接报错。
+320×96 模型同步到 `build/model/`，避免误用旧权重；缺少模型时 CMake
+会直接报错。
 
-可在 `config.h` 中调整输入尺寸、置信度、NMS 阈值、NCNN 线程数及相机参数。
-`INPUT_SIZE` 必须和导出时的 `--imgsz` 一致。
+可在 `config.h` 中调整输入宽高、置信度、NMS 阈值、NCNN 线程数及相机
+参数。`INPUT_WIDTH/INPUT_HEIGHT` 必须和导出时的宽高一致。
 
 ## 关键实现说明
 
-- 预处理使用保持宽高比的 letterbox，填充值为 114；
-- 后处理按 letterbox 的缩放和边距将框映射回原图；
+- 预处理把摄像头画面直接非等比拉伸为 320×96，不使用灰边；
+- 后处理使用独立的 `scaleX/scaleY` 将框映射回原图；
 - 自动读取 NCNN 模型的输入/输出 blob 名称，兼容 PNNX 常见的 `in0/out0`；
 - YOLOv8 原始输出不带 NMS，本工程在 C++ 端按类别执行 NMS。
 - 相机由受控的 `rpicam-vid` 子进程和后台采集线程驱动，只保留最新帧，

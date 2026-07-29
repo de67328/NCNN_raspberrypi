@@ -12,8 +12,20 @@ from ultralytics import YOLO
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export YOLO weights to NCNN")
     parser.add_argument("--weights", type=Path, required=True, help="Trained best.pt")
-    parser.add_argument("--imgsz", type=int, default=320)
+    parser.add_argument(
+        "--imgsz",
+        type=int,
+        nargs=2,
+        metavar=("HEIGHT", "WIDTH"),
+        default=(96, 320),
+        help="Fixed model input in Ultralytics HEIGHT WIDTH order",
+    )
     parser.add_argument("--output", type=Path, default=Path("model"))
+    parser.add_argument(
+        "--name",
+        default="steel_ball_yolov8n_320x96_b1_fp32_best",
+        help="Output basename without extension",
+    )
     return parser.parse_args()
 
 
@@ -26,7 +38,7 @@ def main() -> None:
     exported = Path(
         YOLO(str(weights)).export(
             format="ncnn",
-            imgsz=args.imgsz,
+            imgsz=tuple(args.imgsz),
             batch=1,
             device="cpu",
         )
@@ -39,15 +51,17 @@ def main() -> None:
 
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(param, output / "best.param")
-    shutil.copy2(binary, output / "best.bin")
+    output_param = output / f"{args.name}.param"
+    output_binary = output / f"{args.name}.bin"
+    shutil.copy2(param, output_param)
+    shutil.copy2(binary, output_binary)
     metadata = exported / "metadata.yaml"
     if metadata.is_file():
-        shutil.copy2(metadata, output / "metadata.yaml")
+        shutil.copy2(metadata, output / f"{args.name}.metadata.yaml")
 
     print(f"\nNCNN model ready: {output}")
-    print(f"  {output / 'best.param'}")
-    print(f"  {output / 'best.bin'}")
+    print(f"  {output_param}")
+    print(f"  {output_binary}")
 
 
 if __name__ == "__main__":
