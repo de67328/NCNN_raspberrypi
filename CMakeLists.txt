@@ -50,8 +50,9 @@ target_link_libraries(ball_detect
 
 # ── 每次构建都校验并同步最新模型 ──
 set(MODEL_BASENAME "steel_ball_yolov8n_320x96_b1_fp32_best")
-set(MODEL_PARAM "${CMAKE_SOURCE_DIR}/model/${MODEL_BASENAME}.param")
-set(MODEL_BIN "${CMAKE_SOURCE_DIR}/model/${MODEL_BASENAME}.bin")
+set(MODEL_DIR "${CMAKE_SOURCE_DIR}/../model")   # 模型在 serial/ 的上一级
+set(MODEL_PARAM "${MODEL_DIR}/${MODEL_BASENAME}.param")
+set(MODEL_BIN "${MODEL_DIR}/${MODEL_BASENAME}.bin")
 if(NOT EXISTS "${MODEL_PARAM}" OR NOT EXISTS "${MODEL_BIN}")
     message(FATAL_ERROR
         "NCNN model not found. Run scripts/export_ncnn.py before building.")
