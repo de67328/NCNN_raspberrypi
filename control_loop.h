@@ -14,6 +14,7 @@
 #include "pid.h"
 #include "coord_converter.h"
 #include "serial_motor.h"
+#include "config.h"
 
 #include <string>
 
@@ -67,13 +68,13 @@ private:
     SerialMotor    motor_;
 
     LoopState state_ = LoopState::IDLE;
-    int   targetUPx_    = 320;
+    int   targetUPx_    = cfg::U_CENTER;
     double pidOutputDeg_ = 0.0;
     int   motorPulses_  = 0;
     int   lostFrames_   = 0;
 
-    static constexpr int kMaxLostFrames = 10;
-    static constexpr int kDeadZonePulses = 5;
+    static constexpr int kMaxLostFrames = cfg::MAX_LOST_FRAMES;
+    static constexpr int kDeadZonePulses = cfg::MOTOR_DEADZONE_PULSES;
 };
 
 } // namespace ctrl

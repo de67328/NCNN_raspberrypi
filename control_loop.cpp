@@ -8,10 +8,10 @@ namespace ctrl {
 
 // ═══════════════════════════════════════════════════════════
 ControlLoop::ControlLoop()
-    : pid_(/*Kp*/0.08, /*Ki*/0.005, /*Kd*/0.02,
-           /*outMax*/8.0,   // 最大倾角 ±8°
-           /*dt*/0.05)      // 默认 20Hz
-    , conv_()               // uCenter=320, pulsesPerDeg=80
+    : pid_(cfg::PID_KP, cfg::PID_KI, cfg::PID_KD,
+           cfg::PID_OUT_MAX,
+           cfg::CONTROL_DT)
+    , conv_()
     , motor_()
 {}
 
@@ -59,6 +59,7 @@ double ControlLoop::update(double uBallPx, double dt)
         pid_.setDt(dt);
 
     constexpr double kInvalid = -1.0;
+    constexpr double kMinConfidence = cfg::DET_CONFIDENCE_MIN;
 
     if (uBallPx > kInvalid) {
         // ── 钢球检出 ──
@@ -75,7 +76,9 @@ double ControlLoop::update(double uBallPx, double dt)
         // 死区 + 发送
         if (std::abs(deltaPulses) > kDeadZonePulses) {
             int posAfter = 0;
-            if (motor_.moveRelative(deltaPulses, 200, 10, posAfter)) {
+            if (motor_.moveRelative(deltaPulses,
+                    cfg::MOTOR_DEFAULT_SPEED, cfg::MOTOR_DEFAULT_ACCEL,
+                    posAfter)) {
                 motorPulses_ = posAfter;
             }
         }
