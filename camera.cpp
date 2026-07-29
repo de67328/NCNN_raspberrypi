@@ -27,8 +27,10 @@ const std::array<std::uint8_t, 2> JPEG_EOI = {0xFF, 0xD9};
 }  // namespace
 
 // ═══════════════════════════════════════════════════════════════
-Camera::Camera(int width, int height, int fps)
-    : width_(width), height_(height), fps_(fps)
+Camera::Camera(int width, int height, int fps,
+               int shutterUs, float gain)
+    : width_(width), height_(height), fps_(fps),
+      shutterUs_(shutterUs), gain_(gain)
 {
     streamBuf_.reserve(READ_CHUNK_SIZE * 2);
 }
@@ -82,6 +84,8 @@ bool Camera::open()
                  "--height", height.c_str(),
                  "--codec", "mjpeg",
                  "--framerate", fps.c_str(),
+                 "--shutter", std::to_string(shutterUs_).c_str(),
+                 "--gain", std::to_string(gain_).c_str(),
                  "--denoise", "cdn_off",
                  "--nopreview",
                  "-o", "-",

@@ -22,7 +22,9 @@ constexpr float NMS_THRESHOLD   = 0.45f;
 // 摄像头
 constexpr int   CAM_WIDTH       = 640;
 constexpr int   CAM_HEIGHT      = 480;
-constexpr int   CAM_FPS         = 30;
+constexpr int   CAM_FPS         = 60;        // OV5647: 640x480 最高 62.5fps
+constexpr int   SHUTTER_US      = 2000;      // 快门 (微秒), 2000=1/500s
+constexpr float GAIN            = 4.0f;      // 模拟增益 (1~16)
 
 // 显示
 constexpr const char* WIN_NAME  = "Steel Ball Detection";

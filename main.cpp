@@ -37,7 +37,8 @@ int main()
         detector.inputWidth    = cfg::INPUT_WIDTH;
         detector.inputHeight   = cfg::INPUT_HEIGHT;
 
-        Camera cam(cfg::CAM_WIDTH, cfg::CAM_HEIGHT, cfg::CAM_FPS);
+        Camera cam(cfg::CAM_WIDTH, cfg::CAM_HEIGHT, cfg::CAM_FPS,
+                   cfg::SHUTTER_US, cfg::GAIN);
         if (!cam.open()) return 1;
 
         cv::namedWindow(cfg::WIN_NAME, cv::WINDOW_AUTOSIZE);

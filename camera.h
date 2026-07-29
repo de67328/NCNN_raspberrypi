@@ -14,7 +14,8 @@
 // ═══════════════════════════════════════════════════════════════
 class Camera {
 public:
-    Camera(int width, int height, int fps);
+    Camera(int width, int height, int fps,
+           int shutterUs = 20000, float gain = 1.0f);
     ~Camera();
 
     Camera(const Camera&) = delete;
@@ -32,6 +33,8 @@ private:
     void captureLoop();
 
     int  width_, height_, fps_;
+    int  shutterUs_;
+    float gain_;
     int   fd_   = -1;
     int   childPid_ = -1;
 
