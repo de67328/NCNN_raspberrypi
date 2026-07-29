@@ -30,6 +30,14 @@ public:
     int   inputWidth    = 320;
     int   inputHeight   = 96;
 
+    // ROI 遮罩: 只识别 [roiTop, roiBottom) 横条带内的目标
+    // 设为 0 和图像高度 = 全图（关闭 ROI）
+    int   roiTop       = 0;       // ROI 上边沿 y (原始图像坐标)
+    int   roiBottom    = 0;       // ROI 下边沿 y；0=自动取图像高度
+    int   roiFillB     = 0;       // ROI 外填充色 B
+    int   roiFillG     = 0;
+    int   roiFillR     = 0;
+
 private:
     ncnn::Mat preprocess(const cv::Mat& bgr,
                          float& scaleX, float& scaleY);

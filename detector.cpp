@@ -7,6 +7,7 @@
 #include <stdexcept>
 
 #include <ncnn/mat.h>
+#include <opencv2/imgproc.hpp>
 
 // ═══════════════════════════════════════════════════════════════
 Detector::Detector(const std::string& paramPath, const std::string& binPath)
@@ -59,8 +60,23 @@ std::vector<Detection> Detector::detect(const cv::Mat& bgr)
     if (bgr.empty())
         return {};
 
+    // ── ROI 遮罩：ROI 外区域填充纯色，不改图像尺寸 ──
+    cv::Mat work;
+    const int bottom = (roiBottom > 0) ? roiBottom : bgr.rows;
+    const bool useRoi = (roiTop > 0 || bottom < bgr.rows);
+    if (useRoi) {
+        work = bgr.clone();
+        const cv::Scalar fill(roiFillB, roiFillG, roiFillR);
+        if (roiTop > 0)
+            cv::rectangle(work, cv::Rect(0, 0, bgr.cols, roiTop), fill, cv::FILLED);
+        if (bottom < bgr.rows)
+            cv::rectangle(work, cv::Rect(0, bottom, bgr.cols, bgr.rows - bottom), fill, cv::FILLED);
+    } else {
+        work = bgr;  // 浅拷贝，无额外开销
+    }
+
     float scaleX = 1.f, scaleY = 1.f;
-    ncnn::Mat in = preprocess(bgr, scaleX, scaleY);
+    ncnn::Mat in = preprocess(work, scaleX, scaleY);
 
     ncnn::Extractor ex = net_.create_extractor();
     if (ex.input(inputBlobName_.c_str(), in) != 0)

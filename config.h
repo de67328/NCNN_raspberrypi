@@ -19,6 +19,14 @@ constexpr int   NUM_THREADS      = 3;        // ncnn 推理线程数 (Pi4B:4核,
 constexpr float CONF_THRESHOLD  = 0.80f;
 constexpr float NMS_THRESHOLD   = 0.45f;
 
+// ROI — 只识别横条带状区域，其余填充纯色（减少误检，不改变推理量）
+//       设为 0 和 CAM_HEIGHT 即关闭 ROI（全图识别）
+constexpr int   ROI_TOP         = 120;       // ROI 上边沿 y (px)，0=最上方
+constexpr int   ROI_BOTTOM      = 360;       // ROI 下边沿 y (px)，CAM_HEIGHT=最下方
+constexpr int   ROI_FILL_B      = 0;         // ROI 外填充色 (BGR)
+constexpr int   ROI_FILL_G      = 0;
+constexpr int   ROI_FILL_R      = 0;
+
 // 摄像头
 constexpr int   CAM_WIDTH       = 640;
 constexpr int   CAM_HEIGHT      = 480;

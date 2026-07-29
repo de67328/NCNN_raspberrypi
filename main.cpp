@@ -36,6 +36,11 @@ int main()
         detector.nmsThreshold  = cfg::NMS_THRESHOLD;
         detector.inputWidth    = cfg::INPUT_WIDTH;
         detector.inputHeight   = cfg::INPUT_HEIGHT;
+        detector.roiTop        = cfg::ROI_TOP;
+        detector.roiBottom     = cfg::ROI_BOTTOM;
+        detector.roiFillB      = cfg::ROI_FILL_B;
+        detector.roiFillG      = cfg::ROI_FILL_G;
+        detector.roiFillR      = cfg::ROI_FILL_R;
 
         Camera cam(cfg::CAM_WIDTH, cfg::CAM_HEIGHT, cfg::CAM_FPS,
                    cfg::SHUTTER_US, cfg::GAIN);
