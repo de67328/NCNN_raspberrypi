@@ -16,12 +16,12 @@ constexpr int   INPUT_HEIGHT     = 96;
 constexpr int   NUM_THREADS      = 3;        // ncnn 推理线程数 (Pi4B:4核,留1核)
 
 // 检测
-constexpr float CONF_THRESHOLD  = 0.25f;
+constexpr float CONF_THRESHOLD  = 0.80f;
 constexpr float NMS_THRESHOLD   = 0.45f;
 
 // 摄像头
-constexpr int   CAM_WIDTH       = 1296;
-constexpr int   CAM_HEIGHT      = 972;
+constexpr int   CAM_WIDTH       = 640;
+constexpr int   CAM_HEIGHT      = 480;
 constexpr int   CAM_FPS         = 30;
 
 // 显示
