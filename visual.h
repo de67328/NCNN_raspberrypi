@@ -14,3 +14,6 @@ void drawDetections(cv::Mat& image, const std::vector<Detection>& detections);
 /// 叠加左上角 HUD（状态 + FPS + 耗时）
 void drawHud(cv::Mat& image, bool detecting,
              float fps, int detectMs);
+
+/// 画 ROI 上/下边界虚线（便于观察识别区域）
+void drawRoi(cv::Mat& image, int roiTop, int roiBottom);

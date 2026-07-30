@@ -57,3 +57,26 @@ void drawHud(cv::Mat& image, bool detecting, float fps, int detectMs)
                     cv::Scalar(180, 180, 180), 1, cv::LINE_AA);
     }
 }
+
+// ═══════════════════════════════════════════════════════════════
+void drawRoi(cv::Mat& image, int roiTop, int roiBottom)
+{
+    if (roiTop <= 0 && roiBottom >= image.rows) return;  // ROI 覆盖全图，不画
+    const cv::Scalar color(0, 165, 255);  // 橙色 (BGR)
+    const int thickness = 1;
+    const int dashLen   = 12;  // 实线段长
+    const int gapLen    = 6;   // 空白段长
+
+    auto drawDashed = [&](int y) {
+        if (y <= 0 || y >= image.rows) return;
+        for (int x = 0; x < image.cols; x += dashLen + gapLen) {
+            int xEnd = std::min(x + dashLen, image.cols);
+            cv::line(image, cv::Point(x, y), cv::Point(xEnd, y), color, thickness, cv::LINE_AA);
+        }
+    };
+
+    if (roiTop > 0)
+        drawDashed(roiTop);
+    if (roiBottom < image.rows)
+        drawDashed(roiBottom);
+}

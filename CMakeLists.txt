@@ -30,6 +30,7 @@ add_executable(ball_detect
     detector.cpp
     camera.cpp
     visual.cpp
+    log.cpp
 )
 
 target_include_directories(ball_detect PRIVATE

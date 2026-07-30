@@ -9,6 +9,7 @@
 #include "detector.h"
 #include "camera.h"
 #include "visual.h"
+#include "log.h"
 
 #include <chrono>
 #include <csignal>
@@ -48,11 +49,15 @@ int main()
 
         cv::namedWindow(cfg::WIN_NAME, cv::WINDOW_AUTOSIZE);
 
+        // 日志
+        dlog::init(cfg::LOG_PATH);
+
         // 注册信号处理
         std::signal(SIGINT, onSignal);
         std::signal(SIGTERM, onSignal);
 
         cv::Mat frame;
+        int frameIdx  = 0;
         int frameCnt  = 0;
         int detectMs  = 0;
         float dispFps = 0.f;
@@ -70,6 +75,15 @@ int main()
                 break;
             }
 
+            // ── 1.5. 翻转 (在 ROI / 检测之前) ──
+            if constexpr (cfg::FLIP_H || cfg::FLIP_V) {
+                int flipCode = 0;
+                if (cfg::FLIP_H && cfg::FLIP_V) flipCode = -1;
+                else if (cfg::FLIP_H)            flipCode =  1;
+                else                             flipCode =  0;
+                cv::flip(frame, frame, flipCode);
+            }
+
             // ── 2. 检测 ──
             auto t0 = std::chrono::steady_clock::now();
             auto detections = detector.detect(frame);
@@ -77,8 +91,15 @@ int main()
             detectMs = (int)std::chrono::duration<float, std::milli>(
                 t1 - t0).count();
 
+            // ── 2.5. 记录坐标 ──
+            dlog::writeFrame(frameIdx, detections);
+            ++frameIdx;
+
             // ── 3. 画框 ──
             drawDetections(frame, detections);
+
+            // ── 3.5. ROI 边界线 ──
+            drawRoi(frame, cfg::ROI_TOP, cfg::ROI_BOTTOM);
 
             // ── 4. HUD ──
             ++frameCnt;
@@ -112,6 +133,7 @@ int main()
 
         cv::destroyWindow(cfg::WIN_NAME);
         cam.close();
+        dlog::close();
         std::cout << "Exit." << std::endl;
         return cameraFailed ? 1 : 0;
     } catch (const std::exception& e) {
